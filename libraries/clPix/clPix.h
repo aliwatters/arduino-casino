@@ -31,15 +31,17 @@ class ClPix
     void update(Command cmd);
     void operate();
     void allRand(uint16_t ttc);
+    void clearAll();
+    void clear(int led);
     rgb getColors(uint32_t c);
   private:
-    uint32_t * _tick; // a pointer to global tick.
+    uint32_t * _tick; // a "pointer"* to global tick. (passed currently.)
     uint8_t _pin; // output pin from arduino
     uint8_t _num; // number of neopixels chained
     pixelType neoset[NUMPIXELS];
     void tween();
     void randColor(int led, uint16_t ttc);
-    void setColor(int led, uint32_t color, int inMillis);
+    void setColor(int led, uint32_t color, uint16_t inMillis);
 };
 
 #endif

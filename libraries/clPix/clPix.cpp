@@ -39,9 +39,14 @@ void ClPix::init() {
 
 void ClPix::update(Command c) {
   // eat a command and update internal state based on it.
-  Serial.println("ClPix Recieved: " + c.name);
+  Serial.println("ClPix Recieved: " + c.name + "Args: " + String(c.arg1) + ", " + String(c.arg2) + ", " + String(c.arg3));
+
+  // switch on c.name
   if (c.name == "clpix-all") {
     allRand(uint16_t(c.arg1.toInt())); // POC!
+  }
+  if (c.name == "clpix-clearall") {
+    clearAll();
   }
 
 }
@@ -65,9 +70,18 @@ rgb ClPix::getColors(uint32_t c) {
 
 // ==== internal functions ====
 
+void ClPix::clearAll() {
+  for(int i=0; i<_num; i++){
+    clear(i);
+  }
+}
+
+void ClPix::clear(int led) {
+  setColor(led, pixels.Color(0, 0, 0), 0);
+}
 
 void ClPix::allRand(uint16_t ttc) {
-  Serial.println("Called allRand() randomizing " + String(_num) + " neopixels!");
+  Serial.println("Called allRand() randomizing " + String(_num) + " neopixels!" + " ttc set for " + String(ttc));
   for(int i=0; i<_num; i++){
     randColor(i, ttc);
   }
@@ -83,8 +97,9 @@ void ClPix::randColor(int led, uint16_t ttc) {
 }
 
 
-void ClPix::setColor(int led, uint32_t color, int inMillis)
+void ClPix::setColor(int led, uint32_t color, uint16_t inMillis)
 {
+  Serial.println("SetColor called:" + String(led) +" " + String(inMillis));
   for(int i=0; i<_num; i++){
 
     if (led == i) {
@@ -103,22 +118,23 @@ void ClPix::tween() {
   // use millis.
 
   int tock = millis();
-  int delta = tock - int(_tick); // note _tick is a pointer - loop needs to update.
+  int delta = tock - int(* _tick); // note _tick is a pointer - loop needs to update.
 
 
   bool changed = false;
 
   if (delta > 0) {
 
-    Serial.println("++++++++ delta " + String(delta));
+    //Serial.println("++++++++ delta " + String(delta));
 
     for(int i=0;i<NUMPIXELS;i++){
 
 
       uint32_t current = pixels.getPixelColor(i);
 
-      if (current != neoset[i].target) { // We are not at target - so do the math.
+      if (current != neoset[i].target) { // We are not at target - so no do the math.
 
+        //Serial.println("neoset[i]" + String(i) + " target: " + String(neoset[i].target) + " ttl: " + String(neoset[i].ttl));
         if (neoset[i].ttl == 0 || delta > neoset[i].ttl) {
           Serial.println("Completed " + String(i));
           pixels.setPixelColor(i, neoset[i].target); // just set the color and move on.
@@ -130,13 +146,13 @@ void ClPix::tween() {
           rgb t = getColors(neoset[i].target);
           rgb c = getColors(pixels.getPixelColor(i));
 
-          /*
+/*
             Serial.println(String(i) + " R currently " + String(c.r)  + " tweening to " + String(t.r));
             Serial.println(String(i) + " G currently " + String(c.g)  + " tweening to " + String(t.g));
             Serial.println(String(i) + " B currently " + String(c.b)  + " tweening to " + String(t.b));
 
             Serial.println("Last run " + String(delta) + " ms ago");
-          */
+*/
           // calculate step color...
 
           boolean rUp = (t.r - c.r) > 0;

@@ -18,6 +18,7 @@ void setup() {
 
 void loop() {
 
+  
   // get a command from Serial.
   Command c = clCmd.getCmd();
 
@@ -31,10 +32,11 @@ void loop() {
     // clServo.update(c);
   }
 
+  // start counter loop again.
+  tick = millis();
+  
   // do stuff
   clPix.operate();
   // clServo.operate();
 
-  // and loop again.
-  tick = millis();
 }
