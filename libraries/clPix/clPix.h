@@ -42,7 +42,8 @@ typedef struct pixelType {
   // Primary attributes - used by tween.
   uint32_t target; // target color.
   uint16_t ttl; // milisecs remaining
-
+  uint32_t last; // last change on this pixel.
+  
   String effect; // blink (flips between with a delay) / pulse (fades between)
   uint32_t color1; // use with pulse etc
   uint32_t color2; // use with pulse etc
