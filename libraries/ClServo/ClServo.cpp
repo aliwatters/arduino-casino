@@ -1,5 +1,5 @@
 #include "Arduino.h"
-
+#include "clCmd.h"
 #include <Servo.h>
 
 #include "clServo.h"
@@ -16,16 +16,25 @@ ClServo::ClServo(Servo servo, int pin) { // Constructor
 void ClServo::init() {
     _servo.attach(_pin);
     _servo.write(SERVOZERO);
-    Serial.println("Just wrote speed:\n");
-    Serial.println(SERVOZERO);
     _speed = SERVOZERO;
     _rest_begin = millis();
     _last_rest = millis();
+    Serial.println("clServo Setup Completed");
 }
 
+void ClServo::update(Command c) {
+  Serial.println("ClServo Recieved: " + c.name + " Args: " + String(c.arg1) + ", " + String(c.arg2) + ", " + String(c.arg3));
+
+  if (c.name == "clservo-set") {
+    setNextSpeed(c.arg1.toInt());
+  }
+}
+
+
 void ClServo::setNextSpeed(int nextSpeed) {
+    Serial.println("ClServo-set speed to: " + String(nextSpeed));
     int constrained_speed = constrain(nextSpeed, 0, 180);
-    
+
     _nextSpeed = constrained_speed;
 }
 
@@ -54,7 +63,7 @@ void ClServo::operate() {
     } else if ((_speed > SERVOZERO) && (_nextSpeed == SERVOZERO)) { // running -> resting
         _rest_begin = millis();
     } else { // running -> running
-        
+
     }
     _speed = _nextSpeed;
     _servo.write(_speed);

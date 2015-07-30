@@ -2,7 +2,7 @@
 #define _CLSERVO_H_
 
 #include <Servo.h>
-
+#include "clCmd.h"
 #include "Arduino.h"
 
 
@@ -13,6 +13,7 @@ class ClServo {
     void setNextSpeed(int nextSpeed);
     int getSpeed();
     void operate();
+    void update(Command c);
  private:
     Servo servo;
     int _pin;
