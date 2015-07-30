@@ -19,7 +19,7 @@ void ClServo::init() {
     _speed = SERVOZERO;
     _rest_begin = millis();
     _last_rest = millis();
-    Serial.println("clServo Setup Completed");
+    Serial.println(F("clServo Setup Completed"));
 }
 
 void ClServo::update(Command c) {
@@ -68,7 +68,7 @@ void ClServo::operate() {
     _speed = _nextSpeed;
     _servo.write(_speed);
     if (millis() % 1000 == 0) {
-        Serial.print("[ARDUINO] speed: ");
+        Serial.print(F("[ARDUINO] speed: "));
         Serial.println(_speed);
     }
 }

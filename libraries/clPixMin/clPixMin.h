@@ -1,8 +1,8 @@
 /*
   clPix.h - simple wrapper for neopixels - offering state based behavior
 */
-#ifndef clPix_h
-#define clPix_h
+#ifndef clPixMin_h
+#define clPixMin_h
 #define NUMPIXELS 5
 
 #include "Arduino.h"
@@ -43,18 +43,13 @@ typedef struct pixelType {
   uint32_t target; // target color.
   uint16_t ttl; // milisecs remaining
   uint32_t last; // last change on this pixel.
-
-  String effect; // blink (flips between with a delay) / pulse (fades between)
-  uint32_t color1; // use with pulse etc
-  uint32_t color2; // use with pulse etc
-  uint16_t timer; //
 };
 
 
-class ClPix
+class ClPixMin
 {
   public:
-    ClPix(uint32_t * tick, int pin, int num);
+    ClPixMin(uint32_t * tick, int pin, int num);
     void init();
     void update(Command cmd);
     void operate();
@@ -65,19 +60,14 @@ class ClPix
     rgb getColors(uint32_t c);
     rgb hexToColor(String hex);
     int strToHex(char str[]);
-    void pulse(int led);
-    void pulseAll();
-    void clearEffect(int led); // clear effects?
   private:
     uint32_t * _tick; // a "pointer"* to global tick. (passed currently.)
     uint8_t _pin; // output pin from arduino
     uint8_t _num; // number of neopixels chained
     pixelType neoset[NUMPIXELS];
     void tween();
-    void updatePulse();
     void randColor(int led, uint16_t ttc);
     void setColor(int led, uint32_t color, uint16_t inMillis);
-    void setPulse(int led, uint32_t color1, uint32_t color2, uint16_t inMillis);
 };
 
 #endif
