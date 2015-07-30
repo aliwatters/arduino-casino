@@ -38,5 +38,5 @@ void loop() {
   // do stuff
   clPix.operate();
   // clServo.operate();
-
+  delay(10);
 }

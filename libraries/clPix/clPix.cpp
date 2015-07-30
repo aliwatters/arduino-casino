@@ -5,7 +5,7 @@
 #define NEOPIN 5
 #define NUMPIXELS 5
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel neo = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEO_RGB + NEO_KHZ800);
 
 #include "clPix.h"
 
@@ -14,7 +14,6 @@ ClPix::ClPix(uint32_t * tick, int pin, int num) {
 
 // neoset is out internal state control
 pixelType neoset[NUMPIXELS];
-
 
 // TODO - construct Adafruit here...
 _tick = tick;
@@ -26,34 +25,47 @@ void ClPix::init() {
   // ClCmd set up the serial monitor...
 
   // clear and show.
-  pixels.begin();
+  neo.begin();
 
   for(int i=0; i < _num; i++){
-    pixels.setPixelColor(i, pixels.Color(0,0,0));
+    neo.setPixelColor(i, neo.Color(0,0,0));
   }
 
-  pixels.show();
+  neo.show();
 
   Serial.println("clPix Setup Completed");
 }
 
+
+
 void ClPix::update(Command c) {
   // eat a command and update internal state based on it.
-  Serial.println("ClPix Recieved: " + c.name + "Args: " + String(c.arg1) + ", " + String(c.arg2) + ", " + String(c.arg3));
+  Serial.println("ClPix Recieved: " + c.name + " Args: " + String(c.arg1) + ", " + String(c.arg2) + ", " + String(c.arg3));
 
   // switch on c.name
   if (c.name == "clpix-all") {
     allRand(uint16_t(c.arg1.toInt())); // POC!
-  }
-  if (c.name == "clpix-clearall") {
+  } else if (c.name == "clpix-clearall") {
     clearAll();
+  } else if (c.name == "clpix-colorall") {
+    rgb color = hexToColor(c.arg1);
+    colorAll(color, uint16_t(c.arg2.toInt()));
+  } else if (c.name == "clpix-color") {
+    rgb color = hexToColor(c.arg2);
+    setColor(c.arg1.toInt(), neo.Color(color.r, color.g, color.b), uint16_t(c.arg2.toInt()));
+  } else if (c.name == "clpix-pulseall") {
+    pulseAll();
+  } else if (c.name == "clpix-pulse") {
+    pulse(c.arg1.toInt());
   }
 
 }
 
 void ClPix::operate() {
   // look at internal state and do whatever changes needed.
-  tween(); // wraps this for pixels...
+  updatePulse();
+
+  tween(); // wraps this for neo...
 }
 
 // ==== helper functions
@@ -68,7 +80,91 @@ rgb ClPix::getColors(uint32_t c) {
   return a;
 }
 
+int ClPix::strToHex(char str[])
+{
+  Serial.println(str);
+  int i = strtol(str, 0, 16);
+  Serial.println(String(i));
+  return (int) strtol(str, 0, 16);
+}
+
+rgb ClPix::hexToColor(String hex) {
+
+  Serial.println("hexToColor: " + hex);
+
+  char red[3];
+  char green[3];
+  char blue[3];
+
+  hex.substring(0, 2).toCharArray(red, 3);
+  hex.substring(2, 4).toCharArray(green, 3);
+  hex.substring(4, 6).toCharArray(blue, 3);
+
+  Serial.println("HEX COLORS ARE: " + String(red) + " " + String(green) + " " + String(blue));
+
+  uint8_t r = strToHex(red);
+  uint8_t g = strToHex(green);
+  uint8_t b = strToHex(blue);
+
+  rgb a = {r, g, b};
+  return a;
+}
+
 // ==== internal functions ====
+
+void ClPix::pulseAll() {
+  for(int i=0; i<_num; i++){
+    pulse(i);
+  }
+}
+
+void ClPix::pulse(int led) {
+  // random color first.
+  int m = random(0,100);
+  int n = random(0,100);
+  int o = random(0,100);
+
+  int x = random(100,200);
+  int y = random(100,200);
+  int z = random(100,200);
+
+  setPulse(led, neo.Color(m, n, o), neo.Color(x, y, z), 500);
+}
+
+void ClPix::clearEffect(int led) {
+  neoset[led].effect = "";
+}
+
+void ClPix::setPulse(int led, uint32_t color1, uint32_t color2, uint16_t inMillis)
+{
+  Serial.println("SetPulse called:" + String(led) +" " + String(color1) + " " + String(color2) + " : " + String(inMillis));
+
+  neoset[led].effect = "pulse";
+  neoset[led].color1 = color1;
+  neoset[led].color2 = color2;
+  neoset[led].timer = inMillis;
+}
+
+
+void ClPix::updatePulse() {
+  // check the internal values - and update target and tts if needed - then tween takes care of the rest.
+  for(int i=0; i<_num; i++){
+
+    if (neoset[i].effect == "pulse" && neoset[i].ttl < 1) { // completed an oscillate so go again...
+      Serial.println("Pulse complete for " + String(i));
+      if (neoset[i].target == neoset[i].color1) {
+        neoset[i].target = neoset[i].color2;
+      } else {
+        neoset[i].target = neoset[i].color1;
+      }
+      neoset[i].ttl = neoset[i].timer;
+    }
+
+
+  }
+}
+
+
 
 void ClPix::clearAll() {
   for(int i=0; i<_num; i++){
@@ -77,7 +173,8 @@ void ClPix::clearAll() {
 }
 
 void ClPix::clear(int led) {
-  setColor(led, pixels.Color(0, 0, 0), 0);
+  setColor(led, neo.Color(0, 0, 0), 0);
+  neoset[led].effect = ""; // stops effects..
 }
 
 void ClPix::allRand(uint16_t ttc) {
@@ -87,19 +184,27 @@ void ClPix::allRand(uint16_t ttc) {
   }
 }
 
+void ClPix::colorAll(rgb color, uint16_t ttc) {
+  Serial.println("Called allColor() " + String(_num) + " neopixels!");
+  for(int i=0; i<_num; i++){
+    setColor(i,  neo.Color(color.r, color.g, color.b), ttc);
+  }
+}
+
 void ClPix::randColor(int led, uint16_t ttc) {
 
     int m = random(0,200);
     int n = random(0,200);
     int o = random(0,200);
 
-    setColor(led, pixels.Color(m, n, o), ttc);
+    setColor(led, neo.Color(m, n, o), ttc);
 }
 
 
 void ClPix::setColor(int led, uint32_t color, uint16_t inMillis)
 {
   Serial.println("SetColor called:" + String(led) +" " + String(inMillis));
+
   for(int i=0; i<_num; i++){
 
     if (led == i) {
@@ -130,21 +235,21 @@ void ClPix::tween() {
     for(int i=0;i<NUMPIXELS;i++){
 
 
-      uint32_t current = pixels.getPixelColor(i);
+      uint32_t current = neo.getPixelColor(i);
 
       if (current != neoset[i].target) { // We are not at target - so no do the math.
 
-        //Serial.println("neoset[i]" + String(i) + " target: " + String(neoset[i].target) + " ttl: " + String(neoset[i].ttl));
-        if (neoset[i].ttl == 0 || delta > neoset[i].ttl) {
+        // Serial.println("neoset[i]" + String(i) + " target: " + String(neoset[i].target) + " ttl: " + String(neoset[i].ttl));
+        if (neoset[i].ttl < 1 || delta > neoset[i].ttl) {
           Serial.println("Completed " + String(i));
-          pixels.setPixelColor(i, neoset[i].target); // just set the color and move on.
+          neo.setPixelColor(i, neoset[i].target); // just set the color and move on.
           neoset[i].ttl = 0;
         } else {
 
           // STEP TWEEN!
 
           rgb t = getColors(neoset[i].target);
-          rgb c = getColors(pixels.getPixelColor(i));
+          rgb c = getColors(neo.getPixelColor(i));
 
 /*
             Serial.println(String(i) + " R currently " + String(c.r)  + " tweening to " + String(t.r));
@@ -192,7 +297,7 @@ void ClPix::tween() {
           int g = c.g + gS;
           int b = c.b + bS;
 
-          pixels.setPixelColor(i, pixels.Color(r, g, b));
+          neo.setPixelColor(i, neo.Color(r, g, b));
           neoset[i].ttl -= delta;
         }
 
@@ -202,5 +307,5 @@ void ClPix::tween() {
   }
 
 
-  pixels.show();
+  neo.show();
 }
