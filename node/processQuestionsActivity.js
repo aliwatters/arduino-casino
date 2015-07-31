@@ -12,8 +12,8 @@ var DEFAULT_PORT = 2811;
 var REQUERY_TIMEOUT_MS = 5000; // 5 seconds
 
 // TODO: tweak these values
-var INITIAL_PEAK_AVG = 10;
-var NUM_RECENT_PEAKS_TO_SAVE = 5;
+var NUM_RECENT_DATA_TO_SAVE = 10;
+var DIST_FROM_AVG_MULTIPLIER = 20;
 
 // url for making metrics queries
 var QUERY_URL = 'https://pipe.creativelive.com/api/metrics/rolling/';
@@ -31,9 +31,16 @@ var SERVO_THRESHOLD = SERVO_ZERO + 5;
 var hostAddress = DEFAULT_HOST_NAME;
 var port = DEFAULT_PORT;
 // trackers for calculating peak
-var recentPeaks = [INITIAL_PEAK_AVG];
+var recentData = [];
 var prevTotal = 0;
 var prevPrevTotal = 0;
+
+//////////////////
+// entry point
+parseArguments();
+var client = dgram.createSocket('udp4');
+interval();
+/////////////////
 
 /** parse flag+argument pairs from command line */
 function parseArguments() {
@@ -69,8 +76,8 @@ function getQuestionsActivity(callback) {
     results.forEach(function(count) {
       sum += count;
     })
-    var percent = calculatePeakAndGetPercent(sum);
-    return sendSpeed(mapPercentToServoSpeed(percent), callback);
+    var ratio = updateDataAndGetRatio(sum);
+    return sendSpeed(mapRatioToServoSpeed(ratio), callback);
   });
 }
 
@@ -91,55 +98,64 @@ function makeQuery(url, callback) {
   })
 }
 
-/** uses the total activity to calculate/update new peak if needed and get percentage of activity  */
-function calculatePeakAndGetPercent(totalActivity) {
-  // try update peak info
-  if (prevPrevTotal <= prevTotal && prevTotal > totalActivity) {
-    // previous total was a peak
-    if (recentPeaks.length == NUM_RECENT_PEAKS_TO_SAVE) {
-      recentPeaks.shift();
-    }
-    recentPeaks.push(prevTotal);
+/** estimate total activity's percentage of peak activity */
+function updateDataAndGetRatio(totalActivity) {
+  // update data
+  if (recentData.length == NUM_RECENT_DATA_TO_SAVE) {
+    recentData.shift();
   }
-  // update previous trackers
-  prevPrevTotal = prevTotal;
-  prevTotal = totalActivity;
+  recentData.push(totalActivity);
 
-  var peakAvg = getPeakAverage();
-  var percent = totalActivity >= peakAvg ? 100 : stripDecimal((totalActivity / peakAvg) * 100);
-  console.log('total:', totalActivity, 'avg:', peakAvg, 'percent:', percent);
-  return percent;
+  // find ratio
+  var avg = getAverage();
+  var distFromAvg = (totalActivity - avg) * DIST_FROM_AVG_MULTIPLIER;
+  console.log('dist:', distFromAvg);
+  if (distFromAvg < 0) {
+    distFromAvg = 0;
+  }
+  var estimatedPeak = avg * 2;
+  var ratio = distFromAvg >= estimatedPeak ? 1 : distFromAvg / estimatedPeak;
+  return ratio;
 }
 
 /** gets the average of recent peaks */
-function getPeakAverage() {
-  var numPeaks = recentPeaks.length;
-  if (numPeaks == 0) {
-    return INITIAL_PEAK_AVG;
+function getAverage() {
+  var numData = recentData.length;
+  if (numData == 0) {
+    return 1;
   } else {
     var sum = 0;
-    for (var i = 0; i < numPeaks; i++) {
-      sum += recentPeaks[i];
+    for (var i = 0; i < numData; i++) {
+      sum += recentData[i];
     }
-    return sum / numPeaks;
+    return sum / numData;
   }
 }
 
-/** maps percent of activity to servo speed */
-function mapPercentToServoSpeed(percent) {
-  var x = ((percent / 100) * 65) / 100;
-  var servoSpeed = stripDecimal((180 - SERVO_THRESHOLD) * Math.pow(x, 3) + SERVO_THRESHOLD);
+/** maps ratio of activity to servo speed */
+function mapRatioToServoSpeed(ratio) {
+  if (ratio == 0) {
+    return SERVO_ZERO;
+  }
+
+  var servoSpeed = stripDecimal((180 - SERVO_THRESHOLD) * Math.pow(ratio, 2) + SERVO_THRESHOLD);
+  console.log('ratio:', ratio, 'speed:', servoSpeed);
 
   if (servoSpeed < SERVO_THRESHOLD) {
     console.log('Below Threshold!\n');
-    return servoSpeed = SERVO_ZERO;
+    return SERVO_ZERO;
   }
   return servoSpeed;
 }
 
 /** sends the speed to the device */
 function sendSpeed(speed, callback) {
-  var message = new Buffer('clservo-set:' + speed + '::;');
+  var message;
+  if (speed == SERVO_ZERO) {
+    message = new Buffer('clservo-stop:::;');
+  } else {
+    message = new Buffer('clservo-set:' + speed + '::;');
+  }
   client.send(message, 0, message.length, port, hostAddress, function(err, bytes) {
       if (err) {
         throw err;
@@ -163,7 +179,3 @@ function interval() {
     setTimeout(function() { interval(); }, REQUERY_TIMEOUT_MS);
   });
 }
-
-parseArguments();
-var client = dgram.createSocket('udp4');
-interval();
