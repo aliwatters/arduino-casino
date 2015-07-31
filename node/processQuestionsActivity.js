@@ -1,12 +1,12 @@
 'use strict';
 
-var net = require('net');
 var https = require('https');
 var async = require('async');
+var dgram = require('dgram');
 
 //////// CONSTANTS ///////
 var DEFAULT_HOST_NAME = '10.1.31.13';
-var DEFAULT_PORT = 7;
+var DEFAULT_PORT = 2811;
 
 // timeout in ms for when to requery db
 var REQUERY_TIMEOUT_MS = 5000; // 5 seconds
@@ -24,7 +24,7 @@ var ENDPOINT_VOTE = 'Vote+On+Question';
 var ENDPOINT_TOGGLE = 'Toggle+Questions+Tool';
 
 // servo speeds
-var SERVO_ZERO = 98;
+var SERVO_ZERO = 92;
 var SERVO_THRESHOLD = SERVO_ZERO + 5;
 ///////////////////////////
 
@@ -62,7 +62,6 @@ function getQuestionsActivity(callback) {
       return makeQuery(QUERY_URL + ENDPOINT_TOGGLE, callback);
     }
   ], function(err, results) {
-    console.log('per metric:', results);
     if (err) {
       console.log('[ERROR]', err);
     }
@@ -140,8 +139,13 @@ function mapPercentToServoSpeed(percent) {
 
 /** sends the speed to the device */
 function sendSpeed(speed, callback) {
-  client.write('servo:' + speed + '::;', function() {
-    callback(null, speed);
+  var message = new Buffer('clservo-set:' + speed + '::;');
+  client.send(message, 0, message.length, port, hostAddress, function(err, bytes) {
+      if (err) {
+        throw err;
+      }
+      console.log('UDP message "' + message.toString() + '" sent to ' + hostAddress +':'+ port);
+      callback(null, speed);
   });
 }
 
@@ -161,18 +165,5 @@ function interval() {
 }
 
 parseArguments();
-
-/** TCP connection */
-var client = net.connect({
-  host: hostAddress,
-  port: port
-}, function() {
-  console.log('connected to server');
-  interval();
-});
-client.on('data', function(data) {
-  console.log(data.toString());
-});
-client.on('end', function() {
-  console.log('disconnected from server');
-});
+var client = dgram.createSocket('udp4');
+interval();
