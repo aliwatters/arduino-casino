@@ -21,8 +21,8 @@
 
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT, SPI_CLOCK_DIVIDER);
 
-#define WLAN_SSID       "CL Eng Devices" // supersecret - hide before checkin...
-#define WLAN_PASS       "mak3 all the Things talk" // hide this too.
+#define WLAN_SSID       "SSID NAME" // supersecret - hide before checkin...
+#define WLAN_PASS       "SUPERSECRET" // hide this too.
 #define WLAN_SECURITY   WLAN_SEC_WPA2
 // #define LISTEN_PORT     7
 
