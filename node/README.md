@@ -10,6 +10,6 @@ Alternatively:
 `node processQuestionsActivity.js`
 
 Options:
->-h&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TCP host address
+>-h&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UDP host address
 
->-p&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TCP port
+>-p&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UDP port
