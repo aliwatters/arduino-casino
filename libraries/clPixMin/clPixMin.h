@@ -3,7 +3,7 @@
 */
 #ifndef clPixMin_h
 #define clPixMin_h
-#define NUMPIXELS 5
+
 
 #include "Arduino.h"
 #include "../Adafruit_NeoPixel/Adafruit_NeoPixel.h"
@@ -49,7 +49,7 @@ typedef struct pixelType {
 class ClPixMin
 {
   public:
-    ClPixMin(uint32_t * tick, int pin, int num);
+    ClPixMin(Adafruit_NeoPixel neo, uint32_t * tick, int pin, int num);
     void init();
     void update(Command cmd);
     void operate();
@@ -64,10 +64,11 @@ class ClPixMin
     uint32_t * _tick; // a "pointer"* to global tick. (passed currently.)
     uint8_t _pin; // output pin from arduino
     uint8_t _num; // number of neopixels chained
-    pixelType neoset[NUMPIXELS];
+    pixelType neoset[];
     void tween();
     void randColor(int led, uint16_t ttc);
     void setColor(int led, uint32_t color, uint16_t inMillis);
+    Adafruit_NeoPixel _neo;
 };
 
 #endif

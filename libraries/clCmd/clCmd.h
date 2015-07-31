@@ -5,10 +5,6 @@
 #define clCmd_h
 #include "Arduino.h"
 
-#include "../Adafruit_CC3000/Adafruit_CC3000.h"
-#include <SPI.h>
-
-
 typedef struct Command {
   String name;
   String arg1; // optional
@@ -21,14 +17,14 @@ class ClCmd
   public:
     ClCmd();
     void init(int baud);
-    Command getCmd();
+    Command getCmd(char ch);
     Command parse(String text);
   private:
     boolean _cc3000avail;
+    //boolean _scomplete;
+    //String _sbuffer;
     boolean _complete;
     String _buffer;
-    void clear();
-    boolean wifiDetails();
 };
 
 #endif

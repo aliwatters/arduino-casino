@@ -1,41 +1,37 @@
 #include "Arduino.h"
 #include "clCmd.h"
 #include "../Adafruit_NeoPixel/Adafruit_NeoPixel.h"
-// How to define these dynamically?
-#define NEOPIN 5
-#define NUMPIXELS 5
-
-Adafruit_NeoPixel neo = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEO_RGB + NEO_KHZ800);
 
 #include "clPixMin.h"
 
-ClPixMin::ClPixMin(uint32_t * tick, int pin, int num) {
+ClPixMin::ClPixMin(Adafruit_NeoPixel neo, uint32_t * tick, int pin, int num) {
   // this is the constructor
 
-// neoset is out internal state control
-pixelType neoset[NUMPIXELS];
+  // neoset is out internal state control
+  pixelType neoset[pin];
 
-// TODO - construct Adafruit here...:
-_tick = tick;
-_num = num;
-_pin = pin;
+  // TODO - construct Adafruit here...:
+  _tick = tick;
+  _num = num;
+  _pin = pin;
+  _neo = neo;
 }
 
 void ClPixMin::init() {
   // ClCmd set up the serial monitor...
 
   // clear and show.
-  neo.begin();
+
+  _neo.begin();
 
   for(int i=0; i < _num; i++){
-    neo.setPixelColor(i, neo.Color(0,0,0));
+    _neo.setPixelColor(i, _neo.Color(255,0,0));
   }
 
-  neo.show();
+  _neo.show();
 
   Serial.println(F("clPix Setup Completed"));
 }
-
 
 
 void ClPixMin::update(Command c) {
@@ -52,7 +48,7 @@ void ClPixMin::update(Command c) {
     colorAll(color, uint16_t(c.arg2.toInt()));
   } else if (c.name == "clpix-color") {
     rgb color = hexToColor(c.arg2);
-    setColor(c.arg1.toInt(), neo.Color(color.r, color.g, color.b), uint16_t(c.arg3.toInt()));
+    setColor(c.arg1.toInt(), _neo.Color(color.r, color.g, color.b), uint16_t(c.arg3.toInt()));
   }
 
 }
@@ -113,7 +109,7 @@ void ClPixMin::clearAll() {
 }
 
 void ClPixMin::clear(int led) {
-  setColor(led, neo.Color(0, 0, 0), 0);
+  setColor(led, _neo.Color(0, 0, 0), 0);
 }
 
 void ClPixMin::allRand(uint16_t ttc) {
@@ -126,7 +122,7 @@ void ClPixMin::allRand(uint16_t ttc) {
 void ClPixMin::colorAll(rgb color, uint16_t ttc) {
   Serial.println("Called allColor() " + String(_num) + " neopixels!");
   for(int i=0; i<_num; i++){
-    setColor(i,  neo.Color(color.r, color.g, color.b), ttc);
+    setColor(i,  _neo.Color(color.r, color.g, color.b), ttc);
   }
 }
 
@@ -136,7 +132,7 @@ void ClPixMin::randColor(int led, uint16_t ttc) {
     int n = random(0,200);
     int o = random(0,200);
 
-    setColor(led, neo.Color(m, n, o), ttc);
+    setColor(led, _neo.Color(m, n, o), ttc);
 }
 
 
@@ -163,10 +159,10 @@ void ClPixMin::tween() {
 
     //Serial.println("++++++++ delta " + String(delta));
 
-    for(int i=0;i<NUMPIXELS;i++){
+    for(int i=0;i<_num;i++){
 
 
-      uint32_t current = neo.getPixelColor(i);
+      uint32_t current = _neo.getPixelColor(i);
 
       if (current == neoset[i].target && neoset[i].ttl == 0) {
         // do nothing - we're set.
@@ -179,7 +175,7 @@ void ClPixMin::tween() {
         // if (i == 1) Serial.println("neoset[i]" + String(i) + " current: " + String(current) + " target: " + String(neoset[i].target) + " ttl: " + String(neoset[i].ttl));
         if (neoset[i].ttl < 1 || delta > neoset[i].ttl) {
           // Serial.println("Completed " + String(i));
-          neo.setPixelColor(i, neoset[i].target); // just set the color and move on.
+          _neo.setPixelColor(i, neoset[i].target); // just set the color and move on.
           neoset[i].ttl = 0;
         } else {
 
@@ -253,7 +249,7 @@ void ClPixMin::tween() {
 
           //Serial.println("rs " + String(rS) + " gs " + String(gS) + " bs " + String(bS));
           //Serial.println("TTL: " + String(neoset[i].ttl) + " delta " + String(delta));
-          neo.setPixelColor(i, neo.Color(r, g, b));
+          _neo.setPixelColor(i, _neo.Color(r, g, b));
           neoset[i].ttl -= delta;
         }
 
@@ -263,5 +259,5 @@ void ClPixMin::tween() {
   }
 
 
-  neo.show();
+  _neo.show();
 }

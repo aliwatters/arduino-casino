@@ -8,20 +8,23 @@
 
 class ClServo {
  public:
-    ClServo(Servo servo, int pin);
+    ClServo(Servo servo, int pin, uint16_t zero);
     void init();
     void setNextSpeed(int nextSpeed);
+    void stop();
     int getSpeed();
     void operate();
     void update(Command c);
  private:
-    Servo servo;
     int _pin;
     int _speed;
     int _nextSpeed;
-    unsigned long _rest_begin;
-    unsigned long _last_rest;
+    int _lastCmd;
     Servo _servo;
+    int _zero;
+    int _running;
+    int _resting;
+    int _lastrun;
 };
 
 #endif
